@@ -2,6 +2,8 @@
 
 from configirl import ConfigClass, Constant, Derivable
 
+from .._version import __version__
+
 
 class Config(ConfigClass):
     METADATA = Constant(default=dict(), dont_dump=True)
@@ -20,6 +22,7 @@ class Config(ConfigClass):
     @ENVIRONMENT_NAME.getter
     def get_ENVIRONMENT_NAME(self):
         return "{}-{}".format(self.PROJECT_NAME_SLUG.get_value(self), self.STAGE.get_value())
+
     AWS_PROFILE = Constant()
 
     AWS_PROFILE_FOR_BOTO3 = Derivable()
@@ -28,9 +31,21 @@ class Config(ConfigClass):
     def get_AWS_PROFILE_FOR_BOTO3(self):
         if self.is_aws_code_build_runtime():
             return None
-        else: # local computer runtime
+        else:  # local computer runtime
             return self.AWS_PROFILE.get_value()
 
     AWS_REGION = Constant()
     AWS_ACCOUNT_ID = Constant(printable=False)
     S3_BUCKET_FOR_DEPLOY = Constant()
+
+    ECR_REPO_NAME_WEBAPP = Derivable()
+
+    @ECR_REPO_NAME_WEBAPP.getter
+    def get_ECR_REPO_NAME_WEBAPP(self):
+        return "{}-webapp".format(self.PROJECT_NAME_SLUG.get_value())
+
+    APP_VERSION = Derivable()
+
+    @APP_VERSION.getter
+    def get_APP_VERSION(self):
+        return __version__

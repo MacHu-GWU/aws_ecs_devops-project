@@ -46,7 +46,7 @@ template.add_parameter(param_env_name)
 ecr_repo = ecr.Repository(
     "EcrRepoWebApp",
     template=template,
-    RepositoryName=helper_fn_sub("{}-webapp", param_project_name_slug),
+    RepositoryName=config.ECR_REPO_NAME_WEBAPP.get_value(),
     LifecyclePolicy=ecr.LifecyclePolicy(
         LifecyclePolicyText=json.dumps(
             {
