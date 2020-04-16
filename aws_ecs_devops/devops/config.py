@@ -26,11 +26,7 @@ class Config(ConfigClass):
 
     @AWS_PROFILE_FOR_BOTO3.getter
     def get_AWS_PROFILE_FOR_BOTO3(self):
-        if self.is_aws_ec2_runtime():
-            return None
-        elif self.is_aws_lambda_runtime():
-            return None
-        elif self.is_circle_ci_runtime():
+        if self.is_aws_code_build_runtime():
             return None
         else: # local computer runtime
             return self.AWS_PROFILE.get_value()
