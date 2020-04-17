@@ -2,5 +2,8 @@
     "PROJECT_NAME": "aws_ecs_devops",
     "AWS_PROFILE": "eq_sanhe",
     "AWS_REGION": "us-east-1",
-    "S3_BUCKET_FOR_DEPLOY": "eq-sanhe-for-everything"
+    "S3_BUCKET_FOR_DEPLOY": "eq-sanhe-for-everything",
+    "VPC_ID": "vpc-0132ecdcc451ca76d",
+    "PUBLIC_SUBNET_ID_AZ1": "subnet-0afbad3179243ba50",
+    "PUBLIC_SUBNET_ID_AZ2": "subnet-03c5439ec52cafaec"
 }

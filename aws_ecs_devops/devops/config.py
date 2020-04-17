@@ -38,6 +38,15 @@ class Config(ConfigClass):
     AWS_ACCOUNT_ID = Constant(printable=False)
     S3_BUCKET_FOR_DEPLOY = Constant()
 
+    ECR_ENDPOINT = Derivable()
+
+    @ECR_ENDPOINT.getter
+    def get_ECR_ENDPOINT(self):
+        return "{}.dkr.ecr.{}.amazonaws.com".format(
+            self.AWS_ACCOUNT_ID.get_value(),
+            self.AWS_REGION.get_value()
+        )
+
     ECR_REPO_NAME_WEBAPP = Derivable()
 
     @ECR_REPO_NAME_WEBAPP.getter
@@ -49,3 +58,16 @@ class Config(ConfigClass):
     @APP_VERSION.getter
     def get_APP_VERSION(self):
         return __version__
+
+    VPC_ID = Constant()
+    PUBLIC_SUBNET_ID_AZ1 = Constant()
+    PUBLIC_SUBNET_ID_AZ2 = Constant()
+
+    AWS_CFT_DYNAMIC_DELETEION_POLICY = Derivable()
+
+    @AWS_CFT_DYNAMIC_DELETEION_POLICY.getter
+    def get_AWS_CFT_DYNAMIC_DELETEION_POLICY(self):
+        if self.STAGE.get_value() == "prod":
+            return "Retain"
+        else:
+            return "Delete"

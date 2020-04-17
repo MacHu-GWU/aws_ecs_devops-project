@@ -9,6 +9,8 @@ source ${dir_project_root}/bin/py/python-env.sh
 path_get_config_value_script="${dir_project_root}/config/get-config-value"
 local_repo_name="$(${bin_python} ${path_get_config_value_script} "ECR_REPO_NAME_WEBAPP")"
 app_version="$(${bin_python} ${path_get_config_value_script} "APP_VERSION")"
+stage="$(${bin_python} ${path_get_config_value_script} "STAGE")"
+tag_name="${app_version}-${stage}"
 container_name="${local_repo_name}-smoke-test"
 
 check_exit_status() {
@@ -21,7 +23,7 @@ check_exit_status() {
     fi
 }
 
-docker run --rm -dt --name "${container_name}" -p 10001:80 "${local_repo_name}:${app_version}"
+docker run --rm -dt --name "${container_name}" -p 10001:80 "${local_repo_name}:${tag_name}"
 sleep 10 # sleep 2 seconds wait web server become ready
 
 echo "check if the web app successfully running locally"
