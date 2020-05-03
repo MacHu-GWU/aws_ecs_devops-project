@@ -125,10 +125,11 @@ ecs_task_definition = ecs.TaskDefinition(
     Cpu="256",
     Memory="512",
     ExecutionRoleArn=ecs_task_definition_execution_role.iam_role_arn,
+    DependsOn=ecs_task_definition_execution_role,
 )
 
 # --- service deployment dependencies
-elb_sg = ec2.SecurityGroup(
+sg_for_elb = ec2.SecurityGroup(
     "ElbSecurityGroup",
     template=template,
     VpcId=config.VPC_ID.get_value(),
@@ -143,7 +144,7 @@ elb_sg = ec2.SecurityGroup(
     ]
 )
 
-ecs_sg = ec2.SecurityGroup(
+sg_for_ecs = ec2.SecurityGroup(
     "EcsSecurityGroup",
     template=template,
     VpcId=config.VPC_ID.get_value(),
@@ -159,23 +160,10 @@ ecs_sg = ec2.SecurityGroup(
             IpProtocol="tcp",
             FromPort="1",
             ToPort="65535",
-            SourceSecurityGroupId=Ref(elb_sg),
+            SourceSecurityGroupId=Ref(sg_for_elb),
         ),
-    ]
-)
-
-elb_lb = elasticloadbalancingv2.LoadBalancer(
-    "EcsElasticLoadBalancer",
-    template=template,
-    Type="application",
-    SecurityGroups=[
-        Ref(elb_sg)
     ],
-    Subnets=[
-        config.PUBLIC_SUBNET_ID_AZ1.get_value(),
-        config.PUBLIC_SUBNET_ID_AZ2.get_value(),
-    ],
-    Scheme="internet-facing",
+    DependsOn=sg_for_elb,
 )
 
 elb_default_target_group = elasticloadbalancingv2.TargetGroup(
@@ -185,6 +173,21 @@ elb_default_target_group = elasticloadbalancingv2.TargetGroup(
     Port=80,
     Protocol="HTTP",
     TargetType="ip",
+)
+
+elb_lb = elasticloadbalancingv2.LoadBalancer(
+    "EcsElasticLoadBalancer",
+    template=template,
+    Type="application",
+    SecurityGroups=[
+        Ref(sg_for_elb)
+    ],
+    Subnets=[
+        config.PUBLIC_SUBNET_ID_AZ1.get_value(),
+        config.PUBLIC_SUBNET_ID_AZ2.get_value(),
+    ],
+    Scheme="internet-facing",
+    DependsOn=sg_for_elb,
 )
 
 elb_listener = elasticloadbalancingv2.Listener(
@@ -198,7 +201,11 @@ elb_listener = elasticloadbalancingv2.Listener(
             Type="forward",
             TargetGroupArn=Ref(elb_default_target_group)
         )
-    ]
+    ],
+    DependsOn=[
+        elb_lb,
+        elb_default_target_group,
+    ],
 )
 
 ecs_service = ecs.Service(
@@ -223,7 +230,7 @@ ecs_service = ecs.Service(
         AwsvpcConfiguration=ecs.AwsvpcConfiguration(
             AssignPublicIp="ENABLED",
             SecurityGroups=[
-                Ref(ecs_sg),
+                Ref(sg_for_ecs),
             ],
             Subnets=[
                 config.PUBLIC_SUBNET_ID_AZ1.get_value(),
@@ -233,6 +240,12 @@ ecs_service = ecs.Service(
     ),
     SchedulingStrategy="REPLICA",
     HealthCheckGracePeriodSeconds=30,
+    DependsOn=[
+        sg_for_ecs,
+        ecs_task_definition,
+        elb_lb,
+        elb_default_target_group,
+    ],
 )
 
 template.create_resource_type_label()
