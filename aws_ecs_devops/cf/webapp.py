@@ -7,8 +7,7 @@ Cloudformation Template Generation.
 import json
 
 from troposphere_mate import (
-    Template, Parameter, Ref, helper_fn_sub, canned,
-    ecr, ecs, iam, elasticloadbalancingv2, ec2,
+    Template, Parameter, Ref, helper_fn_sub, canned, ecr, ecs, iam, elasticloadbalancingv2, ec2,
 )
 
 from ..devops.config_init import config
@@ -44,6 +43,7 @@ template.add_parameter(param_project_name_slug)
 template.add_parameter(param_stage)
 template.add_parameter(param_env_name)
 
+
 ecr_repo_webapp = ecr.Repository(
     "EcrRepoWebApp",
     RepositoryName=config.ECR_REPO_NAME_WEBAPP.get_value(),
@@ -71,19 +71,14 @@ ecr_repo_webapp = ecr.Repository(
     DeletionPolicy=config.AWS_CFT_DYNAMIC_DELETEION_POLICY.get_value(),
 )
 
-if config.STAGE.get_value() == "prod":
-    template.add_resource(ecr_repo_webapp)
-
 ecs_cluster = ecs.Cluster(
     "EcsCluster",
-    template=template,
     ClusterName=helper_fn_sub("{}-webapp", param_env_name),
     DeletionPolicy=config.AWS_CFT_DYNAMIC_DELETEION_POLICY.get_value(),
 )
 
 ecs_task_definition_execution_role = iam.Role(
     "IamRoleEcsTaskDefinitionExecutionRole",
-    template=template,
     RoleName=helper_fn_sub("{}-webapp-ecs-role", param_env_name),
     AssumeRolePolicyDocument=canned.iam.create_assume_role_policy_document([
         "ecs-tasks"
@@ -95,7 +90,6 @@ ecs_task_definition_execution_role = iam.Role(
 
 ecs_task_definition = ecs.TaskDefinition(
     "EcsTaskDefinition",
-    template=template,
     ContainerDefinitions=[
         ecs.ContainerDefinition(
             Name="webapp",
@@ -128,12 +122,13 @@ ecs_task_definition = ecs.TaskDefinition(
     DependsOn=ecs_task_definition_execution_role,
 )
 
-# --- service deployment dependencies
+# --- load balancer
+# 负载均衡的 sg, 要允许外界从 80 端口进行访问
 sg_for_elb = ec2.SecurityGroup(
     "ElbSecurityGroup",
-    template=template,
-    VpcId=config.VPC_ID.get_value(),
+    GroupName=helper_fn_sub("{}-elb", param_env_name),
     GroupDescription="ECS allowed Ports",
+    VpcId=config.VPC_ID.get_value(),
     SecurityGroupIngress=[
         dict(
             IpProtocol="tcp",
@@ -144,40 +139,9 @@ sg_for_elb = ec2.SecurityGroup(
     ]
 )
 
-sg_for_ecs = ec2.SecurityGroup(
-    "EcsSecurityGroup",
-    template=template,
-    VpcId=config.VPC_ID.get_value(),
-    GroupDescription="ECS allowed Ports",
-    SecurityGroupIngress=[
-        dict(
-            IpProtocol="tcp",
-            FromPort="80",
-            ToPort="80",
-            CidrIp="0.0.0.0/0",
-        ),
-        dict(
-            IpProtocol="tcp",
-            FromPort="1",
-            ToPort="65535",
-            SourceSecurityGroupId=Ref(sg_for_elb),
-        ),
-    ],
-    DependsOn=sg_for_elb,
-)
-
-elb_default_target_group = elasticloadbalancingv2.TargetGroup(
-    "DefaultTargetGroup",
-    template=template,
-    VpcId=config.VPC_ID.get_value(),
-    Port=80,
-    Protocol="HTTP",
-    TargetType="ip",
-)
-
 elb_lb = elasticloadbalancingv2.LoadBalancer(
     "EcsElasticLoadBalancer",
-    template=template,
+    Name=helper_fn_sub("{}", param_env_name),
     Type="application",
     SecurityGroups=[
         Ref(sg_for_elb)
@@ -190,9 +154,35 @@ elb_lb = elasticloadbalancingv2.LoadBalancer(
     DependsOn=sg_for_elb,
 )
 
+#--- ecs
+# 容器集群的 sg, 要允许 elb 对其进行访问
+sg_for_ecs = ec2.SecurityGroup(
+    "EcsSecurityGroup",
+    GroupName=helper_fn_sub("{}-ecs", param_env_name),
+    GroupDescription="ECS allowed Ports",
+    VpcId=config.VPC_ID.get_value(),
+    SecurityGroupIngress=[
+        dict(
+            IpProtocol="tcp",
+            FromPort="1",
+            ToPort="65535",
+            SourceSecurityGroupId=Ref(sg_for_elb),
+        ),
+    ],
+    DependsOn=sg_for_elb,
+)
+
+elb_default_target_group = elasticloadbalancingv2.TargetGroup(
+    "DefaultTargetGroup",
+    Name=helper_fn_sub("{}-ecs", param_env_name),
+    VpcId=config.VPC_ID.get_value(),
+    Port=80,
+    Protocol="HTTP",
+    TargetType="ip",
+)
+
 elb_listener = elasticloadbalancingv2.Listener(
     "ElbListener",
-    template=template,
     LoadBalancerArn=Ref(elb_lb),
     Port=80,
     Protocol="HTTP",
@@ -210,8 +200,8 @@ elb_listener = elasticloadbalancingv2.Listener(
 
 ecs_service = ecs.Service(
     "EcsService",
-    template=template,
-    Cluster=Ref(ecs_cluster),
+    ServiceName=helper_fn_sub("{}-webapp", param_env_name),
+    Cluster="aws-ecs-devops-prod-webapp",
     TaskDefinition=Ref(ecs_task_definition),
     DeploymentConfiguration=ecs.DeploymentConfiguration(
         MaximumPercent=200,
@@ -247,6 +237,7 @@ ecs_service = ecs.Service(
         elb_default_target_group,
     ],
 )
+
 
 template.create_resource_type_label()
 

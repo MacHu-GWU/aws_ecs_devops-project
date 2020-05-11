@@ -7,7 +7,7 @@ Read config values based on the current environment name.
 import os
 from os.path import dirname, join
 
-from configirl import read_text, json_loads
+from configirl import read_text, write_text, json_loads, json_dumps
 
 from .config import Config
 
@@ -31,3 +31,12 @@ else:
 
 # Read additional config data from external store.
 # put your code here ...
+config.CONFIG_DIR = join(dir_project_root, "config")
+config.dump_shell_script_json_config_file()
+
+# dump ecs
+ecs_service_tf_vars_json = join(dir_project_root, "tf", "ecs-service", "terraform.tfvars.json")
+write_text(
+    text=json_dumps(config.to_terraform_ecs_service_config_data()),
+    abspath=ecs_service_tf_vars_json,
+)

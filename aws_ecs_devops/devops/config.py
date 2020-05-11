@@ -63,6 +63,15 @@ class Config(ConfigClass):
     PUBLIC_SUBNET_ID_AZ1 = Constant()
     PUBLIC_SUBNET_ID_AZ2 = Constant()
 
+    SUBNETS = Derivable()
+
+    @SUBNETS.getter
+    def get_SUBNETS(self):
+        return [
+            self.PUBLIC_SUBNET_ID_AZ1.get_value(),
+            self.PUBLIC_SUBNET_ID_AZ2.get_value(),
+        ]
+
     AWS_CFT_DYNAMIC_DELETEION_POLICY = Derivable()
 
     @AWS_CFT_DYNAMIC_DELETEION_POLICY.getter
@@ -71,3 +80,17 @@ class Config(ConfigClass):
             return "Retain"
         else:
             return "Delete"
+
+    def to_terraform_ecs_service_config_data(self):
+        tf_keys = [
+            self.STAGE.name,
+            self.ENVIRONMENT_NAME.name,
+            self.VPC_ID.name,
+            self.SUBNETS.name,
+        ]
+        data = self.to_dict()
+        config_data = {
+            key: data[key]
+            for key in tf_keys
+        }
+        return config_data
