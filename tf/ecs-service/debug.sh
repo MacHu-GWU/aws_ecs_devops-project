@@ -29,7 +29,7 @@ ENVIRONMENT_NAME="$(cat ${config_file} | jq .ENVIRONMENT_NAME -r)"
 
 cd ${dir_here}
 
-#terraform init
+terraform init
 
 terraform workspace new ${ENVIRONMENT_NAME}
 terraform workspace select ${ENVIRONMENT_NAME}
