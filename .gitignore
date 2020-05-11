@@ -4,7 +4,11 @@ aws_ecs_devops.egg-info/
 aws_ecs_devops-*/
 
 config/00-config-shared-secrets.json
+config/config-final-for-shell-script.json
 config/config-raw.json
+
+.terraform/
+terraform.tfvars.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
