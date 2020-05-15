@@ -26,3 +26,5 @@ picage==0.1.0
 troposphere==2.5.3
 troposphere-mate==0.0.14
 typing==3.7.4.1
+
+pynamodb==4.3.2
