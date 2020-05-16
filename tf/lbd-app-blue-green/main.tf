@@ -20,7 +20,7 @@ data "terraform_remote_state" "lbd_app" {
 
 resource "aws_lb_listener" "lbd_a" {
   load_balancer_arn = "${data.terraform_remote_state.lbd_app.outputs.lb_arn}"
-  port = "10003"
+  port = "10001"
   protocol = "HTTP"
 
   default_action {
