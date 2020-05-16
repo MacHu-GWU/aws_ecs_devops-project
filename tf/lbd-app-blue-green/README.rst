@@ -1,4 +1,4 @@
-Deploy first version to Staging
+1. Deploy first version to Staging
 ------------------------------------------------------------------------------
 
 .. code-block:: tf
@@ -112,3 +112,21 @@ Deploy first version to Staging
       }
     }
 
+
+2. Deploy first version from Staging to Active
+------------------------------------------------------------------------------
+
+.. code-block:: tf
+
+    // content lbd-app-blue-green/main.tf
+
+    resource "aws_lb_listener" "lbd_a" {
+      load_balancer_arn = "${data.terraform_remote_state.lbd_app.outputs.lb_arn}"
+      port = "10001"
+      protocol = "HTTP"
+
+      default_action {
+        type = "forward"
+        target_group_arn = "${data.terraform_remote_state.lbd_app.outputs.target_group_a_arn}"
+      }
+    }
