@@ -36,7 +36,7 @@ resource "aws_lb_listener" "active" {
 
   default_action {
     type = "forward"
-    target_group_arn = "${data.terraform_remote_state.lbd_app.outputs.target_group_b_arn}"
+    target_group_arn = "${data.terraform_remote_state.lbd_app.outputs.target_group_c_arn}"
   }
 }
 
@@ -47,7 +47,7 @@ resource "aws_lb_listener" "inactive" {
 
   default_action {
     type = "forward"
-    target_group_arn = "${data.terraform_remote_state.lbd_app.outputs.target_group_a_arn}"
+    target_group_arn = "${data.terraform_remote_state.lbd_app.outputs.target_group_b_arn}"
   }
 }
 
@@ -57,7 +57,12 @@ resource "aws_lb_listener" "staging" {
   protocol = "HTTP"
 
   default_action {
-    type = "forward"
-    target_group_arn = "${data.terraform_remote_state.lbd_app.outputs.target_group_c_arn}"
+    type = "fixed-response"
+
+    fixed_response {
+      content_type = "text/plain"
+      message_body = "NOTHING"
+      status_code  = "200"
+    }
   }
 }
