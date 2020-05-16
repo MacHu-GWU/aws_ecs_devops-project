@@ -70,6 +70,29 @@ module "lbd_a" {
   LOAD_BALANCER_ARN = "${aws_lb.elb.arn}"
 }
 
+
+module "lbd_b" {
+  source = "./lbd-module"
+
+  ENVIRONMENT_NAME = "${var.LBD_APP_ENVIRONMENT_NAME}"
+  LOGIC_ID = "b"
+  IAM_ROLE_ARN = "${aws_iam_role.lambda.arn}"
+  DEPLOYMENT_FILE = "deploy-b.zip"
+  LOAD_BALANCER_ARN = "${aws_lb.elb.arn}"
+}
+
+
+module "lbd_c" {
+  source = "./lbd-module"
+
+  ENVIRONMENT_NAME = "${var.LBD_APP_ENVIRONMENT_NAME}"
+  LOGIC_ID = "c"
+  IAM_ROLE_ARN = "${aws_iam_role.lambda.arn}"
+  DEPLOYMENT_FILE = "deploy-c.zip"
+  LOAD_BALANCER_ARN = "${aws_lb.elb.arn}"
+}
+
+
 //{% if config.LBD_APP_ACTIVE_FLAG.get_value() %}
 //module "lbd_a" {
 //  source = "./lbd-module"

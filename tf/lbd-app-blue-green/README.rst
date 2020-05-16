@@ -1,4 +1,4 @@
-1. Deploy first version to Staging
+1. Pre-Release Preparation
 ------------------------------------------------------------------------------
 
 .. code-block:: tf
@@ -66,17 +66,6 @@
       policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
     }
 
-
-    module "lbd_a" {
-      source = "./lbd-module"
-
-      ENVIRONMENT_NAME = "${var.LBD_APP_ENVIRONMENT_NAME}"
-      LOGIC_ID = "a"
-      IAM_ROLE_ARN = "${aws_iam_role.lambda.arn}"
-      DEPLOYMENT_FILE = "deploy-a.zip"
-      LOAD_BALANCER_ARN = "${aws_lb.elb.arn}"
-    }
-
 .. code-block:: tf
 
     // content of lbd-app-blue-green/main.tf
@@ -101,7 +90,78 @@
       }
     }
 
-    resource "aws_lb_listener" "lbd_a" {
+    resource "aws_lb_listener" "active" {
+      load_balancer_arn = "${data.terraform_remote_state.lbd_app.outputs.lb_arn}"
+      port = "10001"
+      protocol = "HTTP"
+
+      default_action {
+        type = "fixed-response"
+
+        fixed_response {
+          content_type = "text/plain"
+          message_body = "NOTHING"
+          status_code  = "200"
+        }
+      }
+    }
+
+    resource "aws_lb_listener" "inactive" {
+      load_balancer_arn = "${data.terraform_remote_state.lbd_app.outputs.lb_arn}"
+      port = "10002"
+      protocol = "HTTP"
+
+      default_action {
+        type = "fixed-response"
+
+        fixed_response {
+          content_type = "text/plain"
+          message_body = "NOTHING"
+          status_code  = "200"
+        }
+      }
+    }
+
+    resource "aws_lb_listener" "staging" {
+      load_balancer_arn = "${data.terraform_remote_state.lbd_app.outputs.lb_arn}"
+      port = "10003"
+      protocol = "HTTP"
+
+      default_action {
+        type = "fixed-response"
+
+        fixed_response {
+          content_type = "text/plain"
+          message_body = "NOTHING"
+          status_code  = "200"
+        }
+      }
+    }
+
+
+2. Deploy version 1 to Staging
+------------------------------------------------------------------------------
+
+.. code-block:: tf
+
+    // content lbd-app/main.tf
+
+    // append following content
+    module "lbd_a" {
+      source = "./lbd-module"
+
+      ENVIRONMENT_NAME = "${var.LBD_APP_ENVIRONMENT_NAME}"
+      LOGIC_ID = "a"
+      IAM_ROLE_ARN = "${aws_iam_role.lambda.arn}"
+      DEPLOYMENT_FILE = "deploy-a.zip"
+      LOAD_BALANCER_ARN = "${aws_lb.elb.arn}"
+    }
+
+.. code-block:: tf
+
+    // content lbd-app-blue-green/main.tf
+
+    resource "aws_lb_listener" "staging" {
       load_balancer_arn = "${data.terraform_remote_state.lbd_app.outputs.lb_arn}"
       port = "10003"
       protocol = "HTTP"
@@ -113,14 +173,14 @@
     }
 
 
-2. Deploy first version from Staging to Active
+3. Deploy version 1 from Staging to Active
 ------------------------------------------------------------------------------
 
 .. code-block:: tf
 
     // content lbd-app-blue-green/main.tf
 
-    resource "aws_lb_listener" "lbd_a" {
+    resource "aws_lb_listener" "active" {
       load_balancer_arn = "${data.terraform_remote_state.lbd_app.outputs.lb_arn}"
       port = "10001"
       protocol = "HTTP"
@@ -128,5 +188,137 @@
       default_action {
         type = "forward"
         target_group_arn = "${data.terraform_remote_state.lbd_app.outputs.target_group_a_arn}"
+      }
+    }
+
+    // .. no need to change resource "aws_lb_listener" "inactive"
+
+    resource "aws_lb_listener" "staging" {
+      load_balancer_arn = "${data.terraform_remote_state.lbd_app.outputs.lb_arn}"
+      port = "10003"
+      protocol = "HTTP"
+
+      default_action {
+        type = "fixed-response"
+
+        fixed_response {
+          content_type = "text/plain"
+          message_body = "NOTHING"
+          status_code  = "200"
+        }
+      }
+    }
+
+
+4. Deploy version 2 to Staging
+------------------------------------------------------------------------------
+
+.. code-block:: tf
+
+    // content of lbd-app/main.tf
+
+    // append following content
+    module "lbd_b" {
+      source = "./lbd-module"
+
+      ENVIRONMENT_NAME = "${var.LBD_APP_ENVIRONMENT_NAME}"
+      LOGIC_ID = "b"
+      IAM_ROLE_ARN = "${aws_iam_role.lambda.arn}"
+      DEPLOYMENT_FILE = "deploy-b.zip"
+      LOAD_BALANCER_ARN = "${aws_lb.elb.arn}"
+    }
+
+
+.. code-block:: tf
+
+    // content of lbd-app-blue-green/main.tf
+
+    resource "aws_lb_listener" "staging" {
+      load_balancer_arn = "${data.terraform_remote_state.lbd_app.outputs.lb_arn}"
+      port = "10003"
+      protocol = "HTTP"
+
+      default_action {
+        type = "forward"
+        target_group_arn = "${data.terraform_remote_state.lbd_app.outputs.target_group_b_arn}"
+      }
+    }
+
+
+5. Deploy version 2 from Staging to Active
+------------------------------------------------------------------------------
+
+.. code-block:: tf
+
+    // content of lbd-app-blue-green/main.tf
+
+    resource "aws_lb_listener" "active" {
+      load_balancer_arn = "${data.terraform_remote_state.lbd_app.outputs.lb_arn}"
+      port = "10001"
+      protocol = "HTTP"
+
+      default_action {
+        type = "forward"
+        target_group_arn = "${data.terraform_remote_state.lbd_app.outputs.target_group_b_arn}"
+      }
+    }
+
+    resource "aws_lb_listener" "inactive" {
+      load_balancer_arn = "${data.terraform_remote_state.lbd_app.outputs.lb_arn}"
+      port = "10002"
+      protocol = "HTTP"
+
+      default_action {
+        type = "forward"
+        target_group_arn = "${data.terraform_remote_state.lbd_app.outputs.target_group_a_arn}"
+      }
+    }
+
+    resource "aws_lb_listener" "staging" {
+      load_balancer_arn = "${data.terraform_remote_state.lbd_app.outputs.lb_arn}"
+      port = "10003"
+      protocol = "HTTP"
+
+      default_action {
+        type = "fixed-response"
+
+        fixed_response {
+          content_type = "text/plain"
+          message_body = "NOTHING"
+          status_code  = "200"
+        }
+      }
+    }
+
+6. Deploy version 3 to Staging
+-----------------------------------------------------------------------------
+
+.. code-block:: tf
+
+    // content of lbd-app/main.tf
+
+    // append following content
+    module "lbd_c" {
+      source = "./lbd-module"
+
+      ENVIRONMENT_NAME = "${var.LBD_APP_ENVIRONMENT_NAME}"
+      LOGIC_ID = "c"
+      IAM_ROLE_ARN = "${aws_iam_role.lambda.arn}"
+      DEPLOYMENT_FILE = "deploy-c.zip"
+      LOAD_BALANCER_ARN = "${aws_lb.elb.arn}"
+    }
+
+.. code-block:: tf
+
+    // content of lbd-app-blue-green/main.tf
+
+    resource "aws_lb_listener" "staging" {
+      load_balancer_arn = "${data.terraform_remote_state.lbd_app.outputs.lb_arn}"
+      port = "10003"
+      protocol = "HTTP"
+
+      default_action {
+        type = "forward"
+        target_group_arn = "${data.terraform_remote_state.lbd_app.outputs.target_group_c_arn}"
       }
     }
