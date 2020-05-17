@@ -33,7 +33,7 @@ EOF
 
 resource "aws_iam_role_policy_attachment" "webapp_task_def_exec_role_attachment" {
   role = "${aws_iam_role.task_def_exec_role.name}"
-  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
 
