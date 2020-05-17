@@ -67,7 +67,7 @@ resource "aws_ecs_task_definition" "webapp" {
         "memoryReservation": 512,
         "volumesFrom": [],
         "stopTimeout": null,
-        "image": "${data.aws_caller_identity.current.account_id}.dkr.ecr.${data.aws_region.current.name}.amazonaws.com/aws-ecs-devops-webapp:0.0.1-dev",
+        "image": "${data.aws_caller_identity.current.account_id}.dkr.ecr.${data.aws_region.current.name}.amazonaws.com/aws-ecs-devops-webapp:0.0.2-dev",
         "startTimeout": null,
         "firelensConfiguration": null,
         "dependsOn": null,
@@ -112,6 +112,13 @@ resource "aws_security_group" "elb" {
       "0.0.0.0/0"
     ]
   }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 }
 
 resource "aws_lb" "elb" {
@@ -141,6 +148,13 @@ resource "aws_security_group" "ecs" {
       "${aws_security_group.elb.id}",
     ]
   }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 }
 
 
@@ -168,8 +182,7 @@ resource "aws_lb_listener" "sample_webapp" {
 resource "aws_ecs_service" "sample_webapp" {
   name            = "${var.ENVIRONMENT_NAME}-tf-webapp"
   cluster         = "${aws_ecs_cluster.api_cluster.arn}"
-//  task_definition = "${aws_ecs_task_definition.webapp.arn}"
-  task_definition = "arn:aws:ecs:us-east-1:110330507156:task-definition/aws-ecs-devops-dev-webapp-task-definition:8"
+  task_definition = "${aws_ecs_task_definition.webapp.arn}"
   desired_count   = 1
   launch_type = "FARGATE"
   deployment_maximum_percent = 200
@@ -179,7 +192,7 @@ resource "aws_ecs_service" "sample_webapp" {
 
   load_balancer {
     target_group_arn = "${aws_lb_target_group.sample_webapp.arn}"
-    container_name   = "webapp"
+    container_name   = "sample-webapp"
     container_port   = 80
   }
 
